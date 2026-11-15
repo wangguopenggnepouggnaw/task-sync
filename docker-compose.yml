@@ -1,0 +1,14 @@
+services:
+  task-sync:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DATA_DIR=/data
+    volumes:
+      - task_data:/data
+    restart: unless-stopped
+
+volumes:
+  task_data:

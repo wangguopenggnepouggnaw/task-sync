@@ -1,0 +1,23 @@
+# Render Blueprint —— 任务管理工作台部署
+#
+# ⚠️ 重要：Render 的免费计划（free）不能挂载持久磁盘，数据会随部署/休眠重置。
+# 因此这里使用 Starter 计划 + 1GB 持久磁盘，保证账号和任务数据永久保存。
+#
+# 若只想免费体验（不保证数据不丢）：把 plan 改成 free，并删除下方 disk 段。
+# 详细步骤见 docs/Render部署教程.md
+services:
+  - type: web
+    name: task-sync
+    runtime: docker
+    plan: starter
+    dockerfilePath: Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

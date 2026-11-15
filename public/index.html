@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务管理工作台</title>
+<meta name="theme-color" content="#4f46e5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --panel2:#fafbfc; --text:#1f2430; --muted:#6b7280;
+  --border:#e6e8ec; --accent:#4f46e5; --accent-soft:#eef0ff;
+  --todo:#94a3b8; --doing:#2563eb; --done:#16a34a;
+  --high:#ef4444; --mid:#f59e0b; --low:#10b981;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --radius:12px;
+}
+[data-theme="dark"]{
+  --bg:#0f1115; --panel:#181b21; --panel2:#1e222a; --text:#e6e8ec; --muted:#9aa1ad;
+  --border:#2a2f38; --accent:#818cf8; --accent-soft:#23253a;
+  --todo:#64748b; --doing:#60a5fa; --done:#34d399;
+  --high:#f87171; --mid:#fbbf24; --low:#34d399;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+  background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text)}
+
+header{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--border);box-shadow:var(--shadow);padding:0 20px}
+.header-top{display:flex;align-items:center;gap:10px;padding:12px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
+.brand h1{font-size:17px;margin:0;font-weight:700}
+.brand small{color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.hbtn{border:1px solid var(--border);background:var(--panel);color:var(--text);padding:7px 12px;border-radius:9px;font-size:13px;transition:.15s}
+.hbtn:hover{border-color:var(--accent);color:var(--accent)}
+.hbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.hbtn.primary:hover{filter:brightness(1.06);color:#fff}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px}
+.tab{border:none;background:transparent;color:var(--muted);padding:8px 14px;border-radius:9px;font-size:14px;font-weight:500;white-space:nowrap;transition:.15s}
+.tab:hover{background:var(--panel2);color:var(--text)}
+.tab.active{background:var(--accent-soft);color:var(--accent)}
+.tab .cnt{font-size:11px;background:var(--border);color:var(--muted);border-radius:20px;padding:1px 7px;margin-left:5px}
+.tab.active .cnt{background:var(--accent);color:#fff}
+
+.auth-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sync-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:20px;font-weight:600;border:1px solid var(--border);white-space:nowrap}
+.sync-status.off{color:var(--muted);background:var(--panel2)}
+.sync-status.ok{color:var(--done);background:rgba(22,163,74,.1);border-color:rgba(22,163,74,.3)}
+.sync-status.syncing{color:var(--accent);background:var(--accent-soft);border-color:var(--accent)}
+.sync-status.error{color:var(--high);background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3)}
+
+main{padding:20px;max-width:1400px;margin:0 auto}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar input,.toolbar select{border:1px solid var(--border);background:var(--panel);border-radius:9px;padding:7px 10px;outline:none}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--accent)}
+.toolbar input[type=text]{min-width:200px}
+.grow{flex:1}
+.muted{color:var(--muted);font-size:13px}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--panel)}
+.empty .big{font-size:40px;margin-bottom:8px}
+
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+@media(max-width:900px){.kanban{grid-template-columns:1fr}}
+.kcol{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;min-height:200px}
+.kcol-head{display:flex;align-items:center;gap:8px;padding:4px 4px 10px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.task-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;box-shadow:var(--shadow);transition:.15s}
+.task-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.task-title{font-weight:600;margin-bottom:6px;word-break:break-word}
+.task-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.tag{background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:1px 8px;font-size:11px}
+.pill{color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:600}
+.pill.high{background:var(--high)} .pill.mid{background:var(--mid)} .pill.low{background:var(--low)}
+.pill.todo{background:var(--todo)} .pill.doing{background:var(--doing)} .pill.done{background:var(--done)}
+.progress{height:6px;background:var(--border);border-radius:20px;margin:8px 0 4px;overflow:hidden}
+.progress>div{height:100%;background:var(--accent);border-radius:20px;transition:width .3s}
+.progress>div.done{background:var(--done)}
+.task-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.mini{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:3px 9px;border-radius:7px;font-size:12px;transition:.15s}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.mini.danger:hover{border-color:var(--high);color:var(--high)}
+.mini.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.mini.primary:hover{filter:brightness(1.06);color:#fff}
+.overdue{color:var(--high);font-weight:600}
+
+.list-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.list-row:hover{border-color:var(--accent)}
+@media(max-width:800px){.list-row{grid-template-columns:1fr}}
+
+.gantt-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.zoom-group{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.zoom-group button{border:none;background:var(--panel);color:var(--muted);padding:6px 12px;font-size:13px}
+.zoom-group button.active{background:var(--accent);color:#fff}
+.gantt-wrap{overflow:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);max-height:72vh}
+.gantt-inner{min-width:100%}
+.gantt-head{display:flex;position:sticky;top:0;z-index:6;background:var(--panel)}
+.gantt-corner{position:sticky;left:0;z-index:7;width:190px;min-width:190px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 12px;font-weight:600;font-size:12px;color:var(--muted)}
+.gantt-head-track{flex:1;position:relative}
+.gantt-months{display:flex;border-bottom:1px solid var(--border)}
+.gantt-months>div{padding:4px 6px;font-size:12px;font-weight:600;color:var(--muted);border-right:1px solid var(--border);overflow:hidden;white-space:nowrap}
+.gantt-days{display:flex}
+.gantt-days>div{padding:4px 2px;font-size:11px;text-align:center;color:var(--muted);border-right:1px solid var(--border);overflow:hidden}
+.gantt-days>div.weekend{background:var(--panel2)}
+.gantt-row{display:flex;border-bottom:1px solid var(--border)}
+.gantt-label{position:sticky;left:0;z-index:3;width:190px;min-width:190px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);padding:7px 12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+.gantt-label:hover{background:var(--accent-soft)}
+.gantt-track{flex:1;position:relative}
+.gantt-bar{position:absolute;top:9px;height:20px;border-radius:5px;min-width:3px;cursor:pointer;display:flex;align-items:center;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.gantt-bar .fill{position:absolute;left:0;top:0;bottom:0;opacity:.35;background:#fff}
+.gantt-bar .bar-label{position:relative;z-index:1;font-size:10px;color:#fff;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--high);opacity:.6;z-index:1;pointer-events:none}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center;margin-top:10px}
+.legend .swatch{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+.cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cal-toolbar .month{font-size:16px;font-weight:700;min-width:150px;text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{text-align:center;font-weight:600;color:var(--muted);padding:6px 0;font-size:12px}
+.cal-cell{background:var(--panel);border:1px solid var(--border);border-radius:9px;min-height:92px;padding:6px;cursor:pointer;position:relative;transition:.12s}
+.cal-cell:hover{border-color:var(--accent)}
+.cal-cell.other{opacity:.35}
+.cal-cell.today{border:2px solid var(--accent)}
+.cal-day{font-size:12px;font-weight:600;margin-bottom:4px}
+.cal-chip{display:block;font-size:11px;color:#fff;border-radius:5px;padding:2px 5px;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+.cal-chip.more{background:var(--border);color:var(--muted);font-weight:600}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--panel);border-radius:14px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:0;animation:pop .18s ease}
+@keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-head h3{margin:0;font-size:16px;flex:1}
+.modal-close{border:none;background:transparent;font-size:22px;color:var(--muted);line-height:1;padding:4px 8px;border-radius:7px}
+.modal-close:hover{background:var(--panel2);color:var(--text)}
+.modal-body{padding:20px;max-height:70vh;overflow-y:auto}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--border);background:var(--panel);border-radius:9px;padding:8px 10px;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:70px}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row input[type=range]{flex:1;padding:0}
+.range-row .val{min-width:42px;text-align:center;font-weight:700;color:var(--accent)}
+.notes-box{border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:6px}
+.note-item{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.note-item:last-child{border-bottom:none}
+.note-item .nt{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:2px}
+.note-item .nb{flex:1;word-break:break-word}
+.note-item .ndel{color:var(--muted);border:none;background:transparent;font-size:14px}
+.note-item .ndel:hover{color:var(--high)}
+.notes-add{display:flex;gap:8px;margin-top:8px}
+.notes-add input{flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 10px;outline:none}
+.notes-add input:focus{border-color:var(--accent)}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)}
+.btn{border:1px solid var(--border);background:var(--panel);color:var(--text);padding:8px 16px;border-radius:9px;font-size:14px;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+
+.login-tabs{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ltab{flex:1;border:none;background:var(--panel);color:var(--muted);padding:9px;font-size:14px;font-weight:600}
+.ltab.active{background:var(--accent);color:#fff}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.stat-card .num{font-size:28px;font-weight:800;line-height:1.1}
+.stat-card .lbl{color:var(--muted);font-size:12px;margin-top:4px}
+.stat-card.accent .num{color:var(--accent)}
+.stat-card.green .num{color:var(--done)}
+.stat-card.red .num{color:var(--high)}
+.stat-card.orange .num{color:var(--mid)}
+.bar-seg{display:flex;height:14px;border-radius:20px;overflow:hidden;background:var(--border)}
+.bar-seg>div{height:100%}
+.panel-title{font-size:15px;font-weight:700;margin:0 0 12px}
+footer{padding:24px 20px;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <div class="logo">☑</div>
+      <div>
+        <h1>任务管理工作台</h1>
+        <small>本地优先 · 支持多端云同步</small>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="hbtn primary" onclick="openTaskModal(null)">＋ 新建任务</button>
+    <button class="hbtn" onclick="loadSample()">示例数据</button>
+    <button class="hbtn" onclick="exportJSON()">导出备份</button>
+    <button class="hbtn" onclick="document.getElementById('import-file').click()">导入</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importJSON(event)">
+    <div class="auth-area" id="auth-area"></div>
+    <button class="hbtn" onclick="toggleTheme()" id="theme-btn">🌙 深色</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main>
+  <div id="view"></div>
+</main>
+
+<footer>
+  未登录时为「本地模式」，数据存本机浏览器；登录后自动云同步到你的服务器。建议定期「导出备份」。
+</footer>
+
+<!-- 任务编辑弹窗 -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">新建任务</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full"><label>标题 *</label><input type="text" id="f-title" placeholder="任务名称，例如：完成项目方案初稿"></div>
+        <div class="field full"><label>描述 / 备注</label><textarea id="f-desc" placeholder="任务的详细说明…"></textarea></div>
+        <div class="field"><label>状态</label><select id="f-status"><option value="todo">未开始</option><option value="doing">进行中</option><option value="done">已完成</option></select></div>
+        <div class="field"><label>优先级</label><select id="f-priority"><option value="high">高</option><option value="mid">中</option><option value="low">低</option></select></div>
+        <div class="field"><label>开始日期</label><input type="date" id="f-start"></div>
+        <div class="field"><label>截止日期</label><input type="date" id="f-end"></div>
+        <div class="field full">
+          <label>进度：<span id="f-progress-val">0%</span></label>
+          <div class="range-row">
+            <input type="range" id="f-progress" min="0" max="100" step="5" value="0" oninput="syncProgress(this)">
+            <span class="val" id="f-progress-num">0%</span>
+          </div>
+        </div>
+        <div class="field full"><label>标签（用逗号分隔）</label><input type="text" id="f-tags" placeholder="工作, 个人, 紧急"></div>
+        <div class="field full">
+          <label>工作记录（每次进展/备注一条，自动带时间）</label>
+          <div class="notes-box">
+            <div id="modal-notes"></div>
+            <div class="notes-add">
+              <input type="text" id="f-note-input" placeholder="写一条记录…" onkeydown="if(event.key==='Enter'){event.preventDefault();addModalNote();}">
+              <button type="button" class="btn" onclick="addModalNote()">添加</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录 / 注册弹窗 -->
+<div class="modal-overlay" id="login-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h3 id="login-title">登录</h3>
+      <button class="modal-close" onclick="closeLogin()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="login-tabs">
+        <button id="lt-login" class="ltab active" onclick="loginMode('login')">登录</button>
+        <button id="lt-register" class="ltab" onclick="loginMode('register')">注册</button>
+      </div>
+      <div class="field" style="margin-top:14px"><label>服务器地址</label><input type="text" id="lg-server" placeholder="留空=当前网站地址；异地使用请填 http://IP:端口"></div>
+      <div class="field" style="margin-top:10px"><label>用户名</label><input type="text" id="lg-user" autocomplete="username"></div>
+      <div class="field" style="margin-top:10px"><label>密码</label><input type="password" id="lg-pass" autocomplete="current-password"></div>
+      <div class="field" style="margin-top:10px" id="lg-pass2-wrap" hidden><label>确认密码</label><input type="password" id="lg-pass2" autocomplete="new-password"></div>
+      <div class="muted" id="lg-msg" style="margin-top:12px;min-height:18px;color:var(--high)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeLogin()">离线使用</button>
+      <button class="btn primary" id="lg-submit" onclick="doLogin()">登录</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============ 常量 ============ */
+const STORAGE_KEY = "taskmanager.data.v1";
+const AUTH_KEY = "taskmanager.auth.v1";
+const STATUS = {
+  todo: { label: "未开始", color: "var(--todo)", cls: "todo" },
+  doing: { label: "进行中", color: "var(--doing)", cls: "doing" },
+  done: { label: "已完成", color: "var(--done)", cls: "done" }
+};
+const PRIORITY = {
+  high: { label: "高", color: "var(--high)", cls: "high" },
+  mid: { label: "中", color: "var(--mid)", cls: "mid" },
+  low: { label: "低", color: "var(--low)", cls: "low" }
+};
+const ZOOMS = { day: { px: 30, label: "日" }, week: { px: 11, label: "周" }, month: { px: 3.4, label: "月" } };
+const DAY_MS = 86400000;
+
+/* ============ 状态 ============ */
+let state = { tasks: [], settings: { theme: "light", zoom: "day" } };
+let auth = { token: "", username: "", serverUrl: "" };
+let activeTab = "kanban";
+let filters = { q: "", status: "all", priority: "all", tag: "all", sort: "start" };
+let modalNotes = [];
+let editingId = null;
+let calYear = 0, calMonth = 0;
+let syncState = "off"; // off | ok | syncing | error
+let syncMsg = "";
+let lastSync = 0;
+let syncTimer = null;
+
+/* ============ 工具 ============ */
+function el(tag, attrs, children){
+  const e = document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    if(k === "class") e.className = attrs[k];
+    else if(k === "text") e.textContent = attrs[k];
+    else if(k === "html") e.innerHTML = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  if(children) for(const c of (Array.isArray(children)?children:[children])) if(c) e.appendChild(c);
+  return e;
+}
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function uid(){ return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function todayStr(){ const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parseDate(str){ if(!str) return null; const p = str.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+function fmtDate(str){ return str || "—"; }
+function fmtCN(str){ if(!str) return "—"; const d = parseDate(str); return (d.getMonth()+1)+"月"+d.getDate()+"日"; }
+function fmtDT(date){ const p=n=>String(n).padStart(2,"0"); return date.getFullYear()+"-"+p(date.getMonth()+1)+"-"+p(date.getDate())+" "+p(date.getHours())+":"+p(date.getMinutes()); }
+function addDays(date, n){ const d = new Date(date); d.setDate(d.getDate()+n); return d; }
+function daysBetween(a, b){ return Math.round((b - a) / DAY_MS); }
+
+/* ============ 存储 ============ */
+function normalizeTask(t){
+  if(!t || typeof t !== "object") return null;
+  if(typeof t.updatedAt !== "number" || !isFinite(t.updatedAt)){
+    const parsed = t.updatedAt ? Date.parse(t.updatedAt) : NaN;
+    t.updatedAt = isFinite(parsed) ? parsed : Date.now();
+  }
+  if(!t.id) t.id = uid();
+  if(!t.deleted && !t.title) t.title = "";
+  if(typeof t.createdAt !== "string") t.createdAt = new Date().toISOString();
+  return t;
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && Array.isArray(d.tasks)) state.tasks = d.tasks.map(normalizeTask).filter(Boolean);
+      if(d && d.settings) state.settings = Object.assign(state.settings, d.settings);
+    }
+  }catch(e){ console.warn("读取存储失败", e); }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ alert("保存失败：浏览器存储不可用或已满。"); }
+}
+function saveAuth(){
+  try{ localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); }catch(e){}
+}
+function loadAuth(){
+  try{ const raw = localStorage.getItem(AUTH_KEY); if(raw) auth = Object.assign(auth, JSON.parse(raw)); }catch(e){}
+}
+function getTask(id){ return state.tasks.find(t => t.id === id); }
+function live(){ return state.tasks.filter(t => !t.deleted); }
+function nonArchived(){ return live().filter(t => !t.archived); }
+function archived(){ return live().filter(t => t.archived); }
+
+/* ============ 网络 / 同步 ============ */
+function getServerUrl(){
+  if(auth.serverUrl) return auth.serverUrl.replace(/\/+$/, "");
+  if(location.protocol === "http:" || location.protocol === "https:") return location.origin;
+  return "";
+}
+async function apiFetch(path, opts){
+  const base = getServerUrl();
+  if(!base) throw new Error("未配置服务器");
+  opts = opts || {};
+  const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+  if(auth.token) headers["Authorization"] = "Bearer " + auth.token;
+  return fetch(base + path, Object.assign({}, opts, { headers }));
+}
+function setSyncState(s, msg){
+  syncState = s; syncMsg = msg || ""; renderAuthUI();
+}
+async function syncNow(force){
+  if(!auth.token) return;
+  setSyncState("syncing");
+  try{
+    const res = await apiFetch("/api/sync", { method: "POST", body: JSON.stringify({ tasks: state.tasks }) });
+    if(res.status === 401){ logout(); return; }
+    const data = await res.json();
+    if(!res.ok){ setSyncState("error", data.error || "同步失败"); return; }
+    state.tasks = (data.tasks || []).map(normalizeTask).filter(Boolean);
+    saveState();
+    lastSync = Date.now();
+    setSyncState("ok");
+    renderAll();
+  }catch(e){
+    setSyncState("error", "无法连接服务器");
+  }
+}
+function scheduleSync(delay){
+  if(!auth.token) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncNow(), delay || 1200);
+}
+
+/* ============ 登录 / 注册 ============ */
+let loginModeState = "login";
+function renderAuthUI(){
+  const area = document.getElementById("auth-area");
+  if(!area) return;
+  if(!auth.token){
+    area.innerHTML = `<span class="sync-status off">○ 离线（仅本机）</span>
+      <button class="hbtn" onclick="openLogin()">登录 / 注册</button>`;
+  }else{
+    const cls = syncState === "syncing" ? "syncing" : (syncState === "error" ? "error" : "ok");
+    const label = syncState === "syncing" ? "同步中…" : (syncState === "error" ? ("同步失败" + (syncMsg ? "：" + esc(syncMsg) : "")) : ("已登录：" + esc(auth.username)));
+    const last = lastSync ? "上次同步 " + new Date(lastSync).toLocaleTimeString() : "";
+    area.innerHTML = `<span class="sync-status ${cls}">● ${label}</span>
+      <span class="muted" style="font-size:12px">${last}</span>
+      <button class="hbtn" onclick="syncNow(true)">↻ 同步</button>
+      <button class="hbtn" onclick="logout()">退出</button>`;
+  }
+}
+function openLogin(){
+  document.getElementById("lg-server").value = getServerUrl();
+  loginMode(loginModeState);
+  document.getElementById("lg-msg").textContent = "";
+  document.getElementById("lg-user").value = "";
+  document.getElementById("lg-pass").value = "";
+  document.getElementById("lg-pass2").value = "";
+  document.getElementById("login-overlay").classList.add("open");
+  setTimeout(() => document.getElementById("lg-user").focus(), 50);
+}
+function closeLogin(){ document.getElementById("login-overlay").classList.remove("open"); }
+function loginMode(m){
+  loginModeState = m;
+  document.getElementById("lt-login").classList.toggle("active", m === "login");
+  document.getElementById("lt-register").classList.toggle("active", m === "register");
+  document.getElementById("login-title").textContent = m === "login" ? "登录" : "注册账号";
+  document.getElementById("lg-submit").textContent = m === "login" ? "登录" : "注册并登录";
+  document.getElementById("lg-pass2-wrap").hidden = m !== "register";
+}
+async function doLogin(){
+  const user = document.getElementById("lg-user").value.trim();
+  const pass = document.getElementById("lg-pass").value;
+  const serverInput = document.getElementById("lg-server").value.trim();
+  const msg = document.getElementById("lg-msg");
+  msg.textContent = "";
+  if(!user){ msg.textContent = "请输入用户名"; return; }
+  if(!pass){ msg.textContent = "请输入密码"; return; }
+  if(loginModeState === "register" && pass !== document.getElementById("lg-pass2").value){ msg.textContent = "两次密码不一致"; return; }
+  if(serverInput) auth.serverUrl = serverInput.replace(/\/+$/, "");
+  const path = loginModeState === "register" ? "/api/register" : "/api/login";
+  msg.textContent = "连接服务器中…";
+  try{
+    const res = await apiFetch(path, { method: "POST", body: JSON.stringify({ username: user, password: pass }) });
+    const data = await res.json();
+    if(!res.ok){ msg.textContent = data.error || "操作失败"; return; }
+    auth.token = data.token; auth.username = data.username;
+    saveAuth();
+    closeLogin();
+    await syncNow(true);
+  }catch(e){
+    msg.textContent = "无法连接服务器，请检查“服务器地址”是否正确、服务是否已启动。";
+  }
+}
+function logout(){
+  if(auth.token){ apiFetch("/api/logout", { method: "POST" }).catch(() => {}); }
+  auth.token = ""; auth.username = "";
+  saveAuth();
+  lastSync = 0; syncState = "off";
+  renderAuthUI();
+}
+
+/* ============ 主题 ============ */
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", state.settings.theme);
+  document.getElementById("theme-btn").textContent = state.settings.theme === "dark" ? "☀️ 浅色" : "🌙 深色";
+}
+function toggleTheme(){
+  state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
+  applyTheme(); saveState();
+}
+
+/* ============ 导航 ============ */
+const TABS = [
+  { id: "kanban", label: "看板" },
+  { id: "list", label: "列表" },
+  { id: "gantt", label: "甘特图" },
+  { id: "calendar", label: "日历" },
+  { id: "archive", label: "归档" },
+  { id: "stats", label: "统计" }
+];
+function renderTabs(){
+  const nav = document.getElementById("tabs");
+  nav.innerHTML = "";
+  TABS.forEach(t => {
+    const cnt = t.id === "archive" ? archived().length : (t.id === "stats" ? "" : nonArchived().length);
+    const b = el("button", { class: "tab" + (t.id===activeTab?" active":""), onclick: "switchTab('"+t.id+"')" });
+    b.appendChild(document.createTextNode(t.label));
+    if(cnt !== "" && t.id !== "stats") b.appendChild(el("span", { class:"cnt", text:String(cnt) }));
+    nav.appendChild(b);
+  });
+}
+function switchTab(id){ activeTab = id; renderAll(); }
+
+/* ============ 过滤 / 排序 ============ */
+function applyFilters(list){
+  let arr = list.slice();
+  if(filters.q){
+    const q = filters.q.toLowerCase();
+    arr = arr.filter(t => (t.title||"").toLowerCase().includes(q) || (t.desc||"").toLowerCase().includes(q) || (t.tags||[]).some(tg => tg.toLowerCase().includes(q)));
+  }
+  if(filters.priority !== "all") arr = arr.filter(t => t.priority === filters.priority);
+  if(filters.tag !== "all") arr = arr.filter(t => (t.tags||[]).includes(filters.tag));
+  if(filters.status !== "all") arr = arr.filter(t => t.status === filters.status);
+  const sorters = {
+    start: (a,b) => (a.start||"9999").localeCompare(b.start||"9999") || (a.priority||"").localeCompare(b.priority||""),
+    end: (a,b) => (a.end||"9999").localeCompare(b.end||"9999"),
+    created: (a,b) => (b.createdAt||"").localeCompare(a.createdAt||""),
+    priority: (a,b) => ({high:0,mid:1,low:2}[a.priority]||3) - ({high:0,mid:1,low:2}[b.priority]||3),
+    progress: (a,b) => (b.progress||0) - (a.progress||0)
+  };
+  arr.sort(sorters[filters.sort] || sorters.start);
+  return arr;
+}
+function allTags(){
+  const s = new Set();
+  live().forEach(t => (t.tags||[]).forEach(x => s.add(x)));
+  return Array.from(s).sort();
+}
+function renderToolbar(){
+  const tagOpts = allTags().map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  return `
+    <div class="toolbar">
+      <input type="text" placeholder="🔍 搜索标题 / 描述 / 标签…" value="${esc(filters.q)}" oninput="filters.q=this.value;renderAll();">
+      <select onchange="filters.status=this.value;renderAll();">
+        <option value="all" ${filters.status==='all'?'selected':''}>全部状态</option>
+        <option value="todo" ${filters.status==='todo'?'selected':''}>未开始</option>
+        <option value="doing" ${filters.status==='doing'?'selected':''}>进行中</option>
+        <option value="done" ${filters.status==='done'?'selected':''}>已完成</option>
+      </select>
+      <select onchange="filters.priority=this.value;renderAll();">
+        <option value="all" ${filters.priority==='all'?'selected':''}>全部优先级</option>
+        <option value="high" ${filters.priority==='high'?'selected':''}>高</option>
+        <option value="mid" ${filters.priority==='mid'?'selected':''}>中</option>
+        <option value="low" ${filters.priority==='low'?'selected':''}>低</option>
+      </select>
+      <select onchange="filters.tag=this.value;renderAll();">
+        <option value="all" ${filters.tag==='all'?'selected':''}>全部标签</option>
+        ${tagOpts}
+      </select>
+      <select onchange="filters.sort=this.value;renderAll();">
+        <option value="start" ${filters.sort==='start'?'selected':''}>按开始日期</option>
+        <option value="end" ${filters.sort==='end'?'selected':''}>按截止日期</option>
+        <option value="priority" ${filters.sort==='priority'?'selected':''}>按优先级</option>
+        <option value="progress" ${filters.sort==='progress'?'selected':''}>按进度</option>
+        <option value="created" ${filters.sort==='created'?'selected':''}>按创建时间</option>
+      </select>
+      <span class="muted">共 ${nonArchived().length} 个任务</span>
+    </div>`;
+}
+
+/* ============ 卡片 / 行 片段 ============ */
+function taskCardHTML(t){
+  const st = STATUS[t.status] || STATUS.todo;
+  const pr = PRIORITY[t.priority] || PRIORITY.mid;
+  const isOverdue = t.status !== "done" && t.end && t.end < todayStr();
+  const tags = (t.tags||[]).map(x => `<span class="tag">${esc(x)}</span>`).join("");
+  const dateTxt = [t.start && ("起 "+fmtCN(t.start)), t.end && ("止 "+fmtCN(t.end))].filter(Boolean).join(" · ");
+  return `
+    <div class="task-card" id="card-${t.id}">
+      <div class="task-title">${esc(t.title)||"(未命名)"}</div>
+      <div class="task-meta">
+        <span class="pill ${st.cls}">${st.label}</span>
+        <span class="pill ${pr.cls}">${pr.label}</span>
+        ${t.notes && t.notes.length ? `<span>📝 ${t.notes.length}</span>` : ""}
+        ${dateTxt ? `<span>${dateTxt}</span>` : ""}
+        ${isOverdue ? `<span class="overdue">⚠ 已逾期</span>` : ""}
+      </div>
+      <div class="task-meta">${tags}</div>
+      <div class="progress"><div class="${t.status==='done'?'done':''}" style="width:${t.progress||0}%"></div></div>
+      <div class="task-meta"><span>${t.progress||0}%</span></div>
+      <div class="task-actions">
+        <button class="mini" onclick="openTaskModal('${t.id}')">编辑</button>
+        ${t.status!=='done' ? `<button class="mini primary" onclick="setStatus('${t.id}','done')">完成</button>` : `<button class="mini" onclick="setStatus('${t.id}','todo')">重开</button>`}
+        <button class="mini" onclick="archiveTask('${t.id}')">归档</button>
+        <button class="mini danger" onclick="deleteTask('${t.id}')">删除</button>
+      </div>
+    </div>`;
+}
+function listRowHTML(t){
+  const st = STATUS[t.status] || STATUS.todo;
+  const pr = PRIORITY[t.priority] || PRIORITY.mid;
+  const isOverdue = t.status !== "done" && t.end && t.end < todayStr();
+  return `
+    <div class="list-row">
+      <div>
+        <div class="task-title" style="margin:0 0 2px">${esc(t.title)||"(未命名)"} <span class="pill ${pr.cls}" style="vertical-align:2px">${pr.label}</span></div>
+        <div class="task-meta">${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join("")}</div>
+      </div>
+      <div class="task-meta">起 ${fmtCN(t.start)}</div>
+      <div class="task-meta ${isOverdue?'overdue':''}">止 ${fmtCN(t.end)}</div>
+      <div><span class="pill ${st.cls}">${st.label}</span> <span class="muted" style="margin-left:4px">${t.progress||0}%</span></div>
+      <div class="task-actions" style="margin:0">
+        <button class="mini" onclick="openTaskModal('${t.id}')">编辑</button>
+        ${t.status!=='done' ? `<button class="mini primary" onclick="setStatus('${t.id}','done')">完成</button>` : ""}
+        <button class="mini" onclick="archiveTask('${t.id}')">归档</button>
+      </div>
+    </div>`;
+}
+
+/* ============ 看板 ============ */
+function renderKanban(){
+  const colDefs = [
+    { id:"todo", label:"未开始", color:"var(--todo)" },
+    { id:"doing", label:"进行中", color:"var(--doing)" },
+    { id:"done", label:"已完成", color:"var(--done)" }
+  ];
+  let html = renderToolbar() + `<div class="kanban">`;
+  colDefs.forEach(c => {
+    const items = applyFilters(nonArchived().filter(t => t.status === c.id));
+    html += `<div class="kcol"><div class="kcol-head"><span class="dot" style="background:${c.color}"></span>${c.label} <span class="muted">(${items.length})</span></div>`;
+    html += items.length ? items.map(taskCardHTML).join("") : `<div class="muted" style="padding:10px;text-align:center">暂无</div>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+  document.getElementById("view").innerHTML = html;
+}
+
+/* ============ 列表 ============ */
+function renderList(){
+  const items = applyFilters(nonArchived());
+  let html = renderToolbar();
+  html += items.length ? items.map(listRowHTML).join("") : `<div class="empty"><div class="big">📋</div>暂无任务，点击右上角「新建任务」开始。</div>`;
+  document.getElementById("view").innerHTML = html;
+}
+
+/* ============ 甘特图 ============ */
+function renderGantt(){
+  const tasks = nonArchived().filter(t => t.start);
+  let html = `<div class="gantt-toolbar">
+      <div class="zoom-group">
+        ${Object.keys(ZOOMS).map(z => `<button class="${state.settings.zoom===z?'active':''}" onclick="setZoom('${z}')">${ZOOMS[z].label}</button>`).join("")}
+      </div>
+      <span class="muted">点击条形可编辑任务；无日期任务显示在下方。</span>
+    </div>`;
+  if(!tasks.length){
+    html += `<div class="empty"><div class="big">📊</div>暂无带日期的任务。给任务设置「开始日期」后，这里会显示时间排布。</div>`;
+    document.getElementById("view").innerHTML = html;
+    return;
+  }
+  const px = ZOOMS[state.settings.zoom].px;
+  let minD = null, maxD = null;
+  tasks.forEach(t => {
+    const s = parseDate(t.start); const e = t.end ? parseDate(t.end) : s;
+    if(!minD || s < minD) minD = s;
+    if(!maxD || e > maxD) maxD = e;
+  });
+  const today = parseDate(todayStr());
+  minD = addDays(minD, -5); maxD = addDays(maxD, 7);
+  if(today < minD) minD = addDays(today, -3);
+  if(today > maxD) maxD = addDays(today, 14);
+  const totalDays = daysBetween(minD, maxD) + 1;
+  const timelinePx = Math.round(totalDays * px);
+
+  const months = [];
+  { let cur = null;
+    for(let i=0;i<totalDays;i++){
+      const d = addDays(minD, i);
+      const key = d.getFullYear()+"-"+d.getMonth();
+      if(!cur || cur.key !== key){ if(cur) months.push(cur); cur = {key, label:d.getFullYear()+"年"+(d.getMonth()+1)+"月", start:i, len:0}; }
+      cur.len++;
+    }
+    if(cur) months.push(cur);
+  }
+  const mHtml = months.map(m => `<div style="width:${Math.round(m.len*px)}px">${m.label}</div>`).join("");
+
+  let dHtml = "";
+  if(state.settings.zoom === "day"){
+    for(let i=0;i<totalDays;i++){
+      const d = addDays(minD, i);
+      const dow = d.getDay();
+      const weekend = dow===0 || dow===6;
+      const label = (dow===1 || i===0) ? (d.getMonth()+1)+"/"+d.getDate() : d.getDate();
+      dHtml += `<div class="${weekend?'weekend':''}" style="width:${px}px">${label}</div>`;
+    }
+  } else if(state.settings.zoom === "week"){
+    for(let i=0;i<totalDays;i+=7){
+      const d = addDays(minD, i);
+      dHtml += `<div style="width:${Math.min(7,totalDays-i)*px}px">${(d.getMonth()+1)}/${d.getDate()}</div>`;
+    }
+  }
+
+  const sorted = tasks.slice().sort((a,b)=> (a.start||"").localeCompare(b.start||""));
+  const todayLeft = Math.round(daysBetween(minD, today) * px);
+  let rowsHtml = "";
+  sorted.forEach(t => {
+    const s = parseDate(t.start); const e = t.end ? parseDate(t.end) : s;
+    const left = daysBetween(minD, s) * px;
+    const width = Math.max(3, (daysBetween(s, e) + 1) * px);
+    const color = t.status === "done" ? STATUS.done.color : (PRIORITY[t.priority]||PRIORITY.mid).color;
+    rowsHtml += `
+      <div class="gantt-row" style="height:38px">
+        <div class="gantt-label" title="${esc(t.title)}" onclick="openTaskModal('${t.id}')">${esc(t.title)||"(未命名)"}</div>
+        <div class="gantt-track" style="width:${timelinePx}px">
+          <div class="gantt-bar" style="left:${Math.round(left)}px;width:${Math.round(width)}px;background:${color}" title="${esc(t.title)} · ${fmtCN(t.start)} ~ ${fmtCN(t.end)} · ${t.progress||0}%" onclick="openTaskModal('${t.id}')">
+            <div class="fill" style="width:${t.progress||0}%"></div>
+            <span class="bar-label">${esc(t.title)}</span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  html += `<div class="gantt-wrap"><div class="gantt-inner">
+    <div class="gantt-head">
+      <div class="gantt-corner">任务</div>
+      <div class="gantt-head-track" style="width:${timelinePx}px">
+        <div class="gantt-months">${mHtml}</div>
+        ${dHtml ? `<div class="gantt-days">${dHtml}</div>` : ""}
+      </div>
+    </div>
+    <div style="position:relative">
+      <div class="today-line" style="left:${190 + todayLeft}px" title="今天"></div>
+      ${rowsHtml}
+    </div>
+  </div></div>`;
+
+  const noDate = nonArchived().filter(t => !t.start);
+  if(noDate.length){
+    html += `<div class="panel-title" style="margin-top:18px">无日期任务（${noDate.length}）</div>`;
+    html += noDate.map(t => `<div class="list-row" style="grid-template-columns:2fr 1fr 1fr auto">
+      <div class="task-title" style="margin:0">${esc(t.title)||"(未命名)"}</div>
+      <div><span class="pill ${(STATUS[t.status]||STATUS.todo).cls}">${(STATUS[t.status]||STATUS.todo).label}</span></div>
+      <div class="muted">${t.progress||0}%</div>
+      <div class="task-actions" style="margin:0"><button class="mini" onclick="openTaskModal('${t.id}')">设置日期</button></div>
+    </div>`).join("");
+  }
+
+  html += `<div class="legend">
+    <span>图例：</span>
+    <span><span class="swatch" style="background:var(--high)"></span>高优先级</span>
+    <span><span class="swatch" style="background:var(--mid)"></span>中优先级</span>
+    <span><span class="swatch" style="background:var(--low)"></span>低优先级</span>
+    <span><span class="swatch" style="background:var(--done)"></span>已完成</span>
+    <span><span class="swatch" style="background:var(--high);width:2px"></span>今天</span>
+  </div>`;
+
+  document.getElementById("view").innerHTML = html;
+}
+function setZoom(z){ state.settings.zoom = z; saveState(); renderGantt(); }
+
+/* ============ 日历 ============ */
+function renderCalendar(){
+  const now = new Date();
+  if(!calYear){ calYear = now.getFullYear(); calMonth = now.getMonth(); }
+  const first = new Date(calYear, calMonth, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = todayStr();
+
+  let html = `<div class="cal-toolbar">
+    <button class="btn" onclick="calPrev()">‹ 上月</button>
+    <span class="month">${calYear} 年 ${calMonth+1} 月</span>
+    <button class="btn" onclick="calNext()">下月 ›</button>
+    <button class="btn" onclick="calToday()">回到本月</button>
+    <span class="grow"></span>
+    <span class="muted">点击日期新建任务</span>
+  </div>`;
+
+  const dows = ["日","一","二","三","四","五","六"];
+  html += `<div class="cal-grid">`;
+  dows.forEach(d => html += `<div class="cal-dow">${d}</div>`);
+  const totalCells = Math.ceil((startDow + daysInMonth)/7)*7;
+  for(let i=0;i<totalCells;i++){
+    const dayNum = i - startDow + 1;
+    const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+    const d = new Date(calYear, calMonth, dayNum);
+    const ds = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const tasks = nonArchived().filter(t => {
+      if(!t.start) return false;
+      const s = parseDate(t.start); const e = t.end ? parseDate(t.end) : s;
+      return d >= s && d <= e;
+    });
+    const chips = tasks.slice(0,3).map(t => {
+      const color = t.status==="done" ? STATUS.done.color : (PRIORITY[t.priority]||PRIORITY.mid).color;
+      return `<div class="cal-chip" style="background:${color}" title="${esc(t.title)}" onclick="event.stopPropagation();openTaskModal('${t.id}')">${esc(t.title)}</div>`;
+    }).join("");
+    const more = tasks.length > 3 ? `<div class="cal-chip more">+${tasks.length-3} 更多</div>` : "";
+    html += `<div class="cal-cell ${inMonth?'':'other'} ${ds===today?'today':''}" onclick="openTaskModal(null, '${ds}')">
+      <div class="cal-day">${inMonth?dayNum:""}</div>${chips}${more}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById("view").innerHTML = html;
+}
+function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+function calToday(){ const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); renderCalendar(); }
+
+/* ============ 归档 ============ */
+function renderArchive(){
+  const items = archived();
+  let html = `<div class="toolbar">
+      <span class="grow"></span>
+      <span class="muted">共 ${items.length} 个已归档任务</span>
+      ${items.length ? `<button class="hbtn" onclick="clearArchive()">🗑 清空归档</button>` : ""}
+    </div>`;
+  html += items.length ? items.map(t => `
+    <div class="list-row" style="grid-template-columns:2fr 1fr 1fr auto">
+      <div>
+        <div class="task-title" style="margin:0 0 2px">${esc(t.title)||"(未命名)"}</div>
+        <div class="task-meta">完成于 ${t.completedAt ? fmtDT(new Date(t.completedAt)) : "—"}</div>
+      </div>
+      <div class="task-meta">起 ${fmtCN(t.start)}</div>
+      <div class="task-meta">止 ${fmtCN(t.end)}</div>
+      <div class="task-actions" style="margin:0">
+        <button class="mini" onclick="restoreTask('${t.id}')">恢复</button>
+        <button class="mini" onclick="openTaskModal('${t.id}')">查看</button>
+        <button class="mini danger" onclick="deleteTask('${t.id}')">删除</button>
+      </div>
+    </div>`).join("") : `<div class="empty"><div class="big">🗄️</div>归档为空。已完成的任务可在看板/列表中点击「归档」移到这里。</div>`;
+  document.getElementById("view").innerHTML = html;
+}
+
+/* ============ 统计 ============ */
+function renderStats(){
+  const all = live();
+  const active = nonArchived();
+  const done = active.filter(t => t.status === "done").length;
+  const doing = active.filter(t => t.status === "doing").length;
+  const todo = active.filter(t => t.status === "todo").length;
+  const overdue = active.filter(t => t.status !== "done" && t.end && t.end < todayStr()).length;
+  const today = todayStr();
+  const next7 = addDays(new Date(), 7);
+  const upcoming = active.filter(t => t.status !== "done" && t.end && parseDate(t.end) <= next7 && t.end >= today).length;
+  const avg = active.length ? Math.round(active.reduce((s,t)=>s+(t.progress||0),0)/active.length) : 0;
+  const doneAll = all.filter(t=>t.status==="done").length;
+
+  let html = `<div class="stats-grid">
+    <div class="stat-card"><div class="num">${all.length}</div><div class="lbl">任务总数（含归档）</div></div>
+    <div class="stat-card"><div class="num">${active.length}</div><div class="lbl">未归档任务</div></div>
+    <div class="stat-card green"><div class="num">${doneAll}</div><div class="lbl">已完成</div></div>
+    <div class="stat-card red"><div class="num">${overdue}</div><div class="lbl">已逾期</div></div>
+    <div class="stat-card orange"><div class="num">${upcoming}</div><div class="lbl">未来 7 天到期</div></div>
+    <div class="stat-card accent"><div class="num">${avg}%</div><div class="lbl">平均进度</div></div>
+  </div>`;
+
+  html += `<div class="card"><h4 class="panel-title">状态分布（未归档）</h4>
+    <div class="bar-seg">
+      <div style="width:${active.length?todo/active.length*100:0}%;background:var(--todo)"></div>
+      <div style="width:${active.length?doing/active.length*100:0}%;background:var(--doing)"></div>
+      <div style="width:${active.length?done/active.length*100:0}%;background:var(--done)"></div>
+    </div>
+    <div class="legend" style="margin-top:8px">
+      <span><span class="swatch" style="background:var(--todo)"></span>未开始 ${todo}</span>
+      <span><span class="swatch" style="background:var(--doing)"></span>进行中 ${doing}</span>
+      <span><span class="swatch" style="background:var(--done)"></span>已完成 ${done}</span>
+    </div>
+  </div>`;
+
+  const soon = applyFilters(active.filter(t => t.status !== "done" && t.end && t.end >= today)).filter(t => t.end && parseDate(t.end) <= next7).slice(0, 10);
+  if(soon.length){
+    html += `<div class="card" style="margin-top:16px"><h4 class="panel-title">⏰ 未来 7 天到期</h4>`;
+    soon.forEach(t => {
+      const days = daysBetween(new Date(), parseDate(t.end));
+      html += `<div class="list-row" style="grid-template-columns:2fr 1fr 1fr auto">
+        <div class="task-title" style="margin:0">${esc(t.title)||"(未命名)"}</div>
+        <div class="muted">${fmtDate(t.end)}</div>
+        <div class="${days<=1?'overdue':'muted'}">${days===0?'今天':(days+' 天后')}</div>
+        <div class="task-actions" style="margin:0"><button class="mini" onclick="openTaskModal('${t.id}')">查看</button></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById("view").innerHTML = html;
+}
+
+/* ============ 任务弹窗 ============ */
+function openTaskModal(id, presetDate){
+  editingId = id || null;
+  const t = id ? getTask(id) : null;
+  document.getElementById("modal-title").textContent = t ? "编辑任务" : "新建任务";
+  document.getElementById("f-title").value = t ? (t.title||"") : "";
+  document.getElementById("f-desc").value = t ? (t.desc||"") : "";
+  document.getElementById("f-status").value = t ? (t.status||"todo") : "todo";
+  document.getElementById("f-priority").value = t ? (t.priority||"mid") : "mid";
+  document.getElementById("f-start").value = t ? (t.start||"") : (presetDate||"");
+  document.getElementById("f-end").value = t ? (t.end||"") : "";
+  document.getElementById("f-progress").value = t ? (t.progress||0) : 0;
+  syncProgress(document.getElementById("f-progress"));
+  document.getElementById("f-tags").value = t ? (t.tags||[]).join(", ") : "";
+  modalNotes = t && t.notes ? t.notes.slice() : [];
+  document.getElementById("f-note-input").value = "";
+  renderModalNotes();
+  document.getElementById("modal-overlay").classList.add("open");
+  setTimeout(()=>document.getElementById("f-title").focus(), 50);
+}
+function closeModal(){ document.getElementById("modal-overlay").classList.remove("open"); }
+function syncProgress(input){
+  const v = input.value;
+  document.getElementById("f-progress-val").textContent = v + "%";
+  document.getElementById("f-progress-num").textContent = v + "%";
+}
+function renderModalNotes(){
+  const box = document.getElementById("modal-notes");
+  if(!modalNotes.length){ box.innerHTML = `<div class="muted" style="padding:6px 0">还没有记录。</div>`; return; }
+  box.innerHTML = modalNotes.map((n,i) => `
+    <div class="note-item">
+      <span class="nt">${esc(n.time)}</span>
+      <span class="nb">${esc(n.text)}</span>
+      <button class="ndel" onclick="removeModalNote(${i})" title="删除">×</button>
+    </div>`).join("");
+}
+function addModalNote(){
+  const input = document.getElementById("f-note-input");
+  const text = input.value.trim();
+  if(!text) return;
+  modalNotes.push({ time: fmtDT(new Date()), text });
+  input.value = "";
+  renderModalNotes();
+}
+function removeModalNote(i){ modalNotes.splice(i,1); renderModalNotes(); }
+function saveTask(){
+  const title = document.getElementById("f-title").value.trim();
+  if(!title){ alert("请填写任务标题。"); return; }
+  const start = document.getElementById("f-start").value;
+  const end = document.getElementById("f-end").value;
+  if(start && end && end < start){ alert("截止日期不能早于开始日期。"); return; }
+  const status = document.getElementById("f-status").value;
+  const progress = parseInt(document.getElementById("f-progress").value, 10) || 0;
+  const tags = document.getElementById("f-tags").value.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+  const nowIso = new Date().toISOString();
+
+  if(editingId){
+    const t = getTask(editingId);
+    if(t){
+      Object.assign(t, {
+        title, desc: document.getElementById("f-desc").value.trim(), status, priority: document.getElementById("f-priority").value,
+        start, end, progress, tags, notes: modalNotes, updatedAt: Date.now(),
+        completedAt: status === "done" ? (t.completedAt || nowIso) : null
+      });
+    }
+  } else {
+    state.tasks.unshift({
+      id: uid(), title, desc: document.getElementById("f-desc").value.trim(), status,
+      priority: document.getElementById("f-priority").value, start, end, progress, tags,
+      notes: modalNotes, createdAt: nowIso, updatedAt: Date.now(), archived: false,
+      completedAt: status === "done" ? nowIso : null
+    });
+  }
+  saveState(); closeModal(); scheduleSync(); renderAll();
+}
+function setStatus(id, status){
+  const t = getTask(id); if(!t) return;
+  t.status = status;
+  if(status === "done"){ t.completedAt = t.completedAt || new Date().toISOString(); t.progress = 100; }
+  else if(status === "todo"){ t.completedAt = null; }
+  t.updatedAt = Date.now();
+  saveState(); scheduleSync(); renderAll();
+}
+function archiveTask(id){
+  const t = getTask(id); if(!t) return;
+  if(t.status !== "done" && !confirm("该任务尚未完成，仍要归档吗？")) return;
+  t.archived = true;
+  t.completedAt = t.completedAt || (t.status==="done" ? new Date().toISOString() : null);
+  t.updatedAt = Date.now();
+  saveState(); scheduleSync(); renderAll();
+}
+function restoreTask(id){
+  const t = getTask(id); if(!t) return;
+  t.archived = false; t.updatedAt = Date.now();
+  saveState(); scheduleSync(); renderAll();
+}
+function deleteTask(id){
+  if(!confirm("确定删除该任务？删除会同步到所有设备，此操作不可撤销。")) return;
+  const t = getTask(id);
+  if(t){
+    const idx = state.tasks.indexOf(t);
+    state.tasks[idx] = { id: t.id, deleted: true, updatedAt: Date.now() };
+  }
+  saveState(); scheduleSync(); renderAll();
+}
+function clearArchive(){
+  if(!confirm("确定清空所有归档任务？此操作不可撤销。")) return;
+  const now = Date.now();
+  state.tasks = state.tasks.map(t => (t.archived && !t.deleted) ? { id: t.id, deleted: true, updatedAt: now } : t);
+  saveState(); scheduleSync(); renderAll();
+}
+
+/* ============ 导入 / 导出 ============ */
+function exportJSON(){
+  const data = JSON.stringify({ tasks: live(), settings: state.settings }, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "任务备份-" + todayStr() + ".json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function importJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    try{
+      const d = JSON.parse(reader.result);
+      if(!d || !Array.isArray(d.tasks)) throw new Error("格式不正确");
+      const mode = confirm("导入模式：\n\n确定 = 合并（保留现有，追加导入）\n取消 = 覆盖（用导入数据替换现有全部任务）");
+      const now = Date.now();
+      const incoming = d.tasks.filter(t => t && !t.deleted).map(t => normalizeTask(Object.assign({}, t, { id: t.id || uid(), updatedAt: now })));
+      if(mode){ state.tasks = state.tasks.concat(incoming); }
+      else { state.tasks = incoming; }
+      if(d.settings) state.settings = Object.assign(state.settings, d.settings);
+      saveState(); scheduleSync(); renderAll();
+      alert("导入成功，共 " + incoming.length + " 条任务。");
+    }catch(e){ alert("导入失败：文件不是有效的任务备份 JSON。"); }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+/* ============ 示例数据 ============ */
+function loadSample(){
+  if(live().length && !confirm("已有数据，仍要添加示例任务吗？（不会删除现有数据）")) return;
+  const now = new Date();
+  const d = n => { const x = addDays(now, n); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); };
+  const samples = [
+    { title:"制定季度目标与计划", desc:"梳理本季度关键目标与里程碑。", status:"done", priority:"high", start:d(-12), end:d(-8), progress:100, tags:["工作","规划"], notes:[{time:fmtDT(now), text:"已完成初稿并评审。"}] },
+    { title:"项目方案初稿", desc:"完成方案文档的撰写与内部评审。", status:"doing", priority:"high", start:d(-6), end:d(2), progress:60, tags:["工作"] },
+    { title:"周会与进度同步", desc:"每周例行会议，同步进展。", status:"doing", priority:"mid", start:d(-1), end:d(-1), progress:40, tags:["会议"] },
+    { title:"整理客户反馈", desc:"汇总并归类客户反馈项。", status:"todo", priority:"mid", start:d(1), end:d(4), progress:0, tags:["工作","客户"] },
+    { title:"版本发布准备", desc:"准备发布清单与回滚预案。", status:"todo", priority:"high", start:d(3), end:d(7), progress:0, tags:["工作","发布"] },
+    { title:"个人学习计划", desc:"每周阅读与学习。", status:"todo", priority:"low", start:d(2), end:d(20), progress:0, tags:["个人"] }
+  ];
+  state.tasks = state.tasks.concat(samples.map(s => Object.assign({ id:uid(), createdAt:now.toISOString(), updatedAt:Date.now(), archived:false, completedAt:s.status==="done"?now.toISOString():null }, s)));
+  saveState(); scheduleSync(); renderAll();
+}
+
+/* ============ 渲染入口 ============ */
+function renderAll(){
+  renderTabs();
+  renderAuthUI();
+  applyTheme();
+  if(activeTab === "kanban") renderKanban();
+  else if(activeTab === "list") renderList();
+  else if(activeTab === "gantt") renderGantt();
+  else if(activeTab === "calendar") renderCalendar();
+  else if(activeTab === "archive") renderArchive();
+  else if(activeTab === "stats") renderStats();
+}
+
+/* ============ 初始化 ============ */
+document.addEventListener("keydown", e => { if(e.key === "Escape"){ closeModal(); closeLogin(); } });
+document.getElementById("modal-overlay").addEventListener("click", e => { if(e.target.id === "modal-overlay") closeModal(); });
+document.getElementById("login-overlay").addEventListener("click", e => { if(e.target.id === "login-overlay") closeLogin(); });
+
+loadState();
+loadAuth();
+applyTheme();
+renderAll();
+
+// 定时自动同步（登录后每 60 秒，页面可见时）
+setInterval(() => { if(auth.token && document.visibilityState === "visible") syncNow(); }, 60000);
+// 网络恢复时同步
+window.addEventListener("online", () => { if(auth.token) syncNow(); });
+// 登录态下的初始同步
+if(auth.token) syncNow(true);
+// PWA Service Worker（仅在 http/https 下注册）
+if("serviceWorker" in navigator && (location.protocol === "http:" || location.protocol === "https:")){
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
